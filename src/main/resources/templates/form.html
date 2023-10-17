@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Chat com OpenAI</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- CSS do Bootstrap -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome para ícones -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
+    <!-- Inclusão do SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+
+    <style>
+        /* Estilos básicos para o modo claro/escuro */
+        body[data-theme="dark"] {
+            background-color: #121212;
+            color: white;
+        }
+
+        body[data-theme="light"] {
+            background-color: #fff;
+            color: black;
+        }
+
+        body[data-theme="dark"] .loading-modal-content {
+            background: #333; /* Fundo escuro para o modal no tema escuro */
+            color: white; /* Texto claro para o modal no tema escuro */
+        }
+
+        body[data-theme="dark"] .spinner-border.text-primary {
+            border-color: #fff; /* Cor da borda do spinner para o tema escuro */
+            border-right-color: transparent; /* Faz uma parte do spinner transparente para o efeito visual */
+        }
+
+        body[data-theme="light"] .loading-modal-content {
+            background: #fff; /* Fundo claro para o modal no tema claro */
+            color: black; /* Texto escuro para o modal no tema claro */
+        }
+
+        body[data-theme="light"] .spinner-border.text-primary {
+            border-color: #007bff; /* Cor padrão da borda do spinner para o tema claro */
+            border-right-color: transparent; /* Faz uma parte do spinner transparente para o efeito visual */
+        }
+
+        /* Estilos específicos para o botão de alternância (toggle) */
+        .theme-switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+
+        .theme-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            -webkit-transition: .4s;
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            -webkit-transition: .4s;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #2196F3;
+        }
+
+        input:checked + .slider:before {
+            -webkit-transform: translateX(26px);
+            -ms-transform: translateX(26px);
+            transform: translateX(26px);
+        }
+
+        /* Estilos para os ícones de sol e lua dentro do botão de alternância */
+        .sun-icon, .moon-icon {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            transition: color 0.4s;
+        }
+
+        .sun-icon {
+            left: 10px;
+            color: #f39c12; /* Cor do ícone do sol */
+        }
+
+        .moon-icon {
+            right: 10px;
+            color: #f1c40f; /* Cor do ícone da lua */
+        }
+
+        input:checked + .slider .moon-icon {
+            color: #f39c12; /* Altera a cor do ícone da lua quando ativado */
+        }
+
+        input:checked + .slider .sun-icon {
+            color: #fff; /* Altera a cor do ícone do sol quando ativado */
+        }
+        .loading-modal {
+            display: none; /* Inicialmente oculto */
+            position: fixed; /* Fixo, fica visível mesmo se a página rolar */
+            z-index: 1000; /* Alto valor de z-index para ficar no topo de outros conteúdos */
+            left: 0;
+            top: 0;
+            width: 100%; /* Largura total da viewport */
+            height: 100%; /* Altura total da viewport */
+            overflow: auto; /* Permite rolagem se necessário */
+            background-color: rgba(0,0,0,0.4); /* Cor de fundo semi-opaca */
+        }
+
+        /* Estilo para o conteúdo do modal */
+        .loading-modal-content {
+            position: relative;
+            margin: 0 auto; /* Centraliza horizontalmente */
+            top: 50%; /* Posiciona no meio da viewport */
+            transform: translateY(-50%); /* Ajusta a posição y */
+            padding: 20px;
+            background: #fff; /* Fundo branco para o modal */
+            text-align: center; /* Centraliza o spinner/texto */
+            border-radius: 8px; /* Cantos arredondados */
+            width: 80%; /* ou qualquer largura que preferir */
+            max-width: 400px; /* Largura máxima para o modal */
+        }
+
+        .spinner-border {
+            width: 3rem;
+            height: 3rem; /* Ajusta o tamanho do spinner, se necessário */
+        }
+        /* Estilos adicionais para os botões, se necessário */
+        .btn {
+            margin-right: 10px; /* por exemplo, para adicionar um pouco de espaço entre os botões */
+        }
+
+        .responseDiv-container {
+            border: 1px solid #dee2e6; /* Cor de borda neutra */
+            border-radius: 5px; /* Bordas arredondadas */
+            padding: 20px; /* Espaçamento interno */
+            background-color: #ffffff; /* Fundo claro */
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15); /* Sombra sutil */
+            color: #000; /* Cor do texto para o tema claro */
+        }
+
+        /* Ajustes para o tema escuro */
+        body[data-theme="dark"] .responseDiv-container {
+            background-color: #333; /* Fundo escuro */
+            color: #fff; /* Cor do texto para o tema escuro */
+            border: 1px solid #555; /* Cor de borda para o tema escuro */
+        }
+
+        /* Se desejar, você pode adicionar transições para suavizar a mudança de temas */
+        .responseDiv-container {
+            transition: background-color 0.5s ease, color 0.5s ease, border 0.5s ease;
+        }
+
+    </style>
+</head>
+<body data-theme="light"> <!-- Tema padrão -->
+
+<div class="container mt-5">
+    <!-- Switch para Modo Claro/Escuro -->
+    <label class="theme-switch" for="checkbox">
+        <input type="checkbox" id="checkbox" />
+        <div class="slider">
+            <i class="fas fa-sun sun-icon"></i> <!-- Ícone do sol -->
+            <i class="fas fa-moon moon-icon"></i> <!-- Ícone da lua -->
+        </div>
+    </label>
+
+    <h2>Conversando com Chat GPT</h2>
+    <form action="#" th:action="@{/}" method="post" class="mt-4" id="chatForm">
+        <div class="form-group">
+            <label for="modelVersion">Selecione a versão:</label>
+            <select id="modelVersion" name="modelVersion" class="form-control">
+                <option th:each="version : ${modelVersion}"
+                        th:value="${version}"
+                        th:text="${version}"
+                        th:selected="${version == selectedModel}">
+                    Versão
+                </option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="prompt">Prompt:</label>
+            <textarea id="prompt" name="prompt" rows="4" cols="50" class="form-control"></textarea>
+        </div>
+
+        <div>
+            <button type="button" id="submitBtn" class="btn btn-primary">Enviar</button>
+            <button type="button" id="clearBtn" class="btn btn-secondary">Limpar</button>
+        </div>
+    </form>
+    <!-- Seção de resposta -->
+    <div th:if="${response != null}" class="responseDiv-container mt-4" id="responseDiv">
+        <h3>Resposta:</h3>
+        <p style="white-space: pre-wrap;" th:text="${response}" class="responseDiv-content"></p> <!-- Usando CSS para manter a formatação do texto -->
+    </div>
+
+</div>
+
+<!-- Modal de Carregamento -->
+<div id="loading" class="loading-modal">
+    <div class="loading-modal-content">
+        <div class="spinner-border text-primary" role="status">
+            <span class="sr-only">Carregando...</span>
+        </div>
+        <p>Carregando, por favor aguarde...</p> <!-- Mensagem opcional -->
+    </div>
+</div>
+
+<!-- JavaScript do Bootstrap e dependências -->
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', (event) => {
+        const themeSwitch = document.getElementById('checkbox');
+        const loadingModal = document.getElementById('loading'); // Selecionando o modal de carregamento
+        const chatForm = document.getElementById('chatForm'); // Você precisa ter certeza de que seu formulário tem o id "chatForm"
+        const submitBtn = document.getElementById('submitBtn'); // Botão de envio do formulário
+        const clearBtn = document.getElementById('clearBtn'); // Botão para limpar o formulário
+        const responseDiv = document.getElementById('responseDiv'); // Div para mostrar a resposta
+
+        // Função para alternar os temas
+        themeSwitch.addEventListener('change', (event) => {
+            document.body.setAttribute('data-theme', event.currentTarget.checked ? 'dark' : 'light');
+            localStorage.setItem('theme', event.currentTarget.checked ? 'dark' : 'light'); // Salvando a preferência no localStorage
+        });
+
+        // Função para mostrar o modal de carregamento
+        function showLoading() {
+            loadingModal.style.display = 'block';
+        }
+
+        // Evento de envio do formulário
+        if (chatForm && submitBtn) { // Verificando se o formulário está presente
+            submitBtn.addEventListener('click', function(event) {
+                // Pega os valores dos campos
+                const modelVersion = document.getElementById('modelVersion').value.trim();
+                const prompt = document.getElementById('prompt').value.trim();
+                // Verifica se os campos não estão vazios
+                if (!modelVersion || !prompt) {
+                    // Mostra mensagem de erro usando SweetAlert2
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Erro ao enviar o formulário',
+                        text: 'Por favor, selecione a versão de consulta e digite seu texto.'
+                    });
+                }else{
+                    showLoading(); // Mostra o spinner quando o formulário é enviado
+                    chatForm.submit(); // Envia o formulário
+                }
+            });
+        }
+        if(clearBtn){
+            clearBtn.addEventListener('click', function(event) {
+                responseDiv.innerHTML = ''; // Isso limpa o conteúdo
+            });
+        }
+
+        // Verifique se o usuário tem uma preferência de tema e aplique-a
+        const currentTheme = localStorage.getItem('theme') || 'light';
+        if (currentTheme === 'dark') {
+            themeSwitch.checked = true;
+            document.body.setAttribute('data-theme', 'dark');
+        }
+    });
+</script>
+</body>
+</html>
